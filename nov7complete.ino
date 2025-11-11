@@ -1,9 +1,9 @@
 #include <Bluepad32.h>
 
-int motor1Pin1 = 25; 
-int motor1Pin2 = 26; 
-int motor2Pin1 = 32; 
-int motor2Pin2 = 33; 
+int motor1Pin1 = 12; 
+int motor1Pin2 = 13; 
+int motor2Pin1 = 26; 
+int motor2Pin2 = 27; 
 
 // ====== PWM Channels ====== //
 const int pwmChannelA1 = 0;
@@ -63,7 +63,20 @@ void dumpGamepad(ControllerPtr ctl) {
   ctl->axisRX(), ctl->axisRY()  // Right joystick X,Y
   );
 }
-
+void forwardR(int speed,int minspeed) {
+  Serial.println("Moving Forward");
+    ledcWrite(pwmChannelA1, 0);
+  ledcWrite(pwmChannelA2, speed);
+  ledcWrite(pwmChannelB1, 0);
+  ledcWrite(pwmChannelB2, (speed-minspeed));
+}
+void forwardL(int speed,int minspeed) {
+  Serial.println("Moving Forward");
+  ledcWrite(pwmChannelA1, 0);
+  ledcWrite(pwmChannelA2, (speed-minspeed));
+  ledcWrite(pwmChannelB1, 0);
+  ledcWrite(pwmChannelB2, speed);
+}
 void forward(int speed) {
   Serial.println("Moving Forward");
   ledcWrite(pwmChannelA1, speed);
@@ -71,7 +84,21 @@ void forward(int speed) {
   ledcWrite(pwmChannelB1, speed);
   ledcWrite(pwmChannelB2, 0);
 }
+void backwardR(int speed,int minspeed) {
+  Serial.println("Moving Backward");
+  ledcWrite(pwmChannelA1, speed);
+  ledcWrite(pwmChannelA2, 0);
+  ledcWrite(pwmChannelB1, (speed-minspeed));
+  ledcWrite(pwmChannelB2, 0);
+}
+void backwardL(int speed,int minspeed) {
+  Serial.println("Moving Backward");
 
+  ledcWrite(pwmChannelA1, (speed-minspeed));
+  ledcWrite(pwmChannelA2, 0);
+  ledcWrite(pwmChannelB1, speed);
+  ledcWrite(pwmChannelB2, 0);
+}
 void backward(int speed) {
   Serial.println("Moving Backward");
   ledcWrite(pwmChannelA1, 0);
@@ -82,18 +109,18 @@ void backward(int speed) {
 
 void left(int speed) {
   Serial.println("Turning Left");
-  ledcWrite(pwmChannelA1, 0);
-  ledcWrite(pwmChannelA2, speed);
-  ledcWrite(pwmChannelB1, speed);
-  ledcWrite(pwmChannelB2, 0);
-}
-
-void right(int speed) {
-  Serial.println("Turning Right");
   ledcWrite(pwmChannelA1, speed);
   ledcWrite(pwmChannelA2, 0);
   ledcWrite(pwmChannelB1, 0);
   ledcWrite(pwmChannelB2, speed);
+}
+
+void right(int speed) {
+  Serial.println("Turning Right");
+  ledcWrite(pwmChannelA1, 0);
+  ledcWrite(pwmChannelA2, speed);
+  ledcWrite(pwmChannelB1, speed);
+  ledcWrite(pwmChannelB2, 0);
 }
 
 void stopMotor() {
@@ -106,12 +133,22 @@ void stopMotor() {
 }
 void processGamepad(ControllerPtr ctl) {
 
-  int speedY = map(abs(ctl->axisY()), 0, 512, 0, 255);
-  int speedX = map(abs(ctl->axisRX()), 0, 512, 0, 255);
+  int speedY = map(abs(ctl->axisY()), 0, 512, 50, 255   );
+  int speedX = map(abs(ctl->axisRX()), 0, 512, 50, 255);
+  int speedA = map(abs(ctl->axisRX()),0, 512, 0, 125);
 
-
+  if((ctl->axisY() <= -25)&&(ctl->axisRX() >= 25)) {
+    forwardL(speedY,speedA);
+  }else if((ctl->axisY() <= -25)&&(ctl->axisRX() <= -25)) {
+    forwardR(speedY,speedA);
+  }
+  //== LEFT JOYSTICK - DOWN ==//
+  else if ((ctl->axisY() >= 25)&&(ctl->axisRX() >= 25)) {
+    backwardL(speedY,speedA);
+  }else if ((ctl->axisY() >= 25)&&(ctl->axisRX() <= -25)) {
+    backwardR(speedY,speedA);}
   //== LEFT JOYSTICK - UP ==//
-  if (ctl->axisY() <= -25) {
+  else if (ctl->axisY() <= -25) {
     backward(speedY);
     }
 
@@ -122,20 +159,22 @@ void processGamepad(ControllerPtr ctl) {
 
   //== RIGHT JOYSTICK - LEFT ==//
   else if (ctl->axisRX() <= -25) {
-    left(speedX);
+    right(speedX);
   }
 
   //== RIGHT JOYSTICK - RIGHT ==//
   else if (ctl->axisRX() >= 25) {
-    right(speedX);
+    left(speedX);
   }
 
   else {
   stopMotor();
   }
-
+  
   dumpGamepad(ctl);
 }
+
+
 
 void processControllers() {
   for (auto myController : myControllers) {
@@ -167,7 +206,7 @@ void setup() {
   // ledcAttachChannel(freq, resolution, pwmChannel);
   int freq = 30000;        // frekuensi PWM
   int resolution= 8;
-   ledcSetup(pwmChannelA1, freq, resolution);
+  ledcSetup(pwmChannelA1, freq, resolution);
   ledcSetup(pwmChannelA2, freq, resolution);
   ledcSetup(pwmChannelB1, freq, resolution);
   ledcSetup(pwmChannelB2, freq, resolution);
